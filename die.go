@@ -20,10 +20,6 @@ type Die struct {
 	buffer, queue []int
 }
 
-const maxUint64 = ^uint64(0)
-
-var sidesToThreshold = map[uint64]Threshold{}
-
 func NewDie(sides int) *Die {
 	// Generate a cryptographically secure seed for the RNG
 	buffer := make([]byte, 8)
@@ -42,22 +38,16 @@ func NewDie(sides int) *Die {
 }
 
 func (Die) getThreshold(sides uint64) Threshold {
-	threshold, found := sidesToThreshold[sides]
-	if found {
-		return threshold
-	}
-
+	var t Threshold
 	// ln(2**64)~==44.36, I'm rounding it down a bit to reduce RNG re-rolls.
-	threshold.amount = int(40 / math.Log(float64(sides)))
+	t.amount = int(40 / math.Log(float64(sides)))
 
-	var modulusValue uint64 = 1
-	for i := threshold.amount; i > 0; i-- {
-		modulusValue *= sides
+	var modulus uint64 = 1
+	for i := t.amount; i > 0; i-- {
+		modulus *= sides
 	}
-	threshold.value = maxUint64 - maxUint64%modulusValue
-
-	sidesToThreshold[sides] = threshold
-	return threshold
+	t.value = math.MaxUint64 - math.MaxUint64%modulus
+	return t
 }
 
 func (die *Die) Roll() int {

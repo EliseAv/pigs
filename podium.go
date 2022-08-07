@@ -1,36 +1,41 @@
 package main
 
-import (
-	"sort"
-)
-
-type Podium []struct {
-	bet   int
-	score int
+type Podium struct {
+	subset  []int
+	idxBest int
 }
 
-func NewPodium(tracker Scores) Podium {
-	podium := make(Podium, len(tracker.scores))
-	for i, v := range tracker.scores {
-		podium[i].bet = i + 1
-		podium[i].score = v
+func NewPodium(tracker *Scores) *Podium {
+	var podium Podium
+	podium.subset = podium.calculateSubset(tracker.duplicate())
+	if len(podium.subset) == 0 {
+		return nil
 	}
-	sort.Sort(podium)
-	return podium
+	podium.idxBest = podium.findBest()
+	return &podium
 }
 
-func (podium Podium) Len() int {
-	return len(podium)
-}
-
-func (podium Podium) Less(i, j int) bool {
-	if podium[i].score != podium[j].score {
-		return podium[i].score > podium[j].score
-	} else {
-		return podium[i].bet < podium[j].bet
+func (Podium) calculateSubset(tracker Scores) []int {
+	if len(tracker.scores) == 0 {
+		return nil
 	}
+	wimpScore := tracker.scores[0]
+	for i, s := range tracker.scores {
+		if s < wimpScore {
+			return tracker.scores[:i]
+		}
+	}
+	return tracker.scores
 }
 
-func (podium Podium) Swap(i, j int) {
-	podium[i], podium[j] = podium[j], podium[i]
+func (p *Podium) findBest() int {
+	best := 0
+	value := 0
+	for i, current := range p.subset {
+		if value < current {
+			value = current
+			best = i
+		}
+	}
+	return best
 }

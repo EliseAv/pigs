@@ -5,30 +5,28 @@ type Scores struct {
 	plays  int
 }
 
-func (scores *Scores) addScore(part Scores) {
-	if scores.scores == nil || scores.plays == 0 {
-		*scores = part
+func (s *Scores) addScore(part Scores) {
+	if s.scores == nil || s.plays == 0 {
+		*s = part
 		return
 	}
-	if len(part.scores) > len(scores.scores) {
-		scores.scores, part.scores = part.scores, scores.scores
+	if len(part.scores) > len(s.scores) {
+		s.scores, part.scores = part.scores, s.scores
 	}
 	for i, v := range part.scores {
-		scores.scores[i] += v
+		s.scores[i] += v
 	}
-	scores.plays += part.plays
+	s.plays += part.plays
 }
 
-func (scores *Scores) addPlay(play []int) {
+func (s *Scores) addPlay(play []int) {
 	// make sure we have room for the play
-	places := 0
+	places := -len(s.scores)
 	for _, val := range play {
 		places += val
 	}
-	if places > len(scores.scores) {
-		newScores := make([]int, places)
-		copy(newScores, scores.scores)
-		scores.scores = newScores
+	if places > 0 {
+		s.scores = append(s.scores, make([]int, places)...)
 	}
 
 	// calculate scores and accumulate them at the same time
@@ -37,14 +35,14 @@ func (scores *Scores) addPlay(play []int) {
 	for _, roll := range play {
 		part += roll
 		for ; index < part; index++ {
-			scores.scores[index] += part
+			s.scores[index] += part
 		}
 	}
-	scores.plays++
+	s.plays++
 }
 
-func (scores Scores) duplicate() Scores {
-	destination := Scores{make([]int, len(scores.scores)), scores.plays}
-	copy(destination.scores, scores.scores)
+func (s Scores) duplicate() Scores {
+	destination := Scores{make([]int, len(s.scores)), s.plays}
+	copy(destination.scores, s.scores)
 	return destination
 }

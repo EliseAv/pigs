@@ -10,7 +10,7 @@ type GameRules struct {
 func NewGameRules(dieSides int, lose ...int) *GameRules {
 	slice := make([]bool, dieSides)
 	for _, value := range lose {
-		slice[value] = true
+		slice[value-1] = true
 	}
 	return &GameRules{dieSides: dieSides, lose: slice}
 }
