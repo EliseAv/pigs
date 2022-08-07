@@ -11,6 +11,6 @@ package main
 
 func main() {
 	rules := NewGameRules(6, 1)
-	tracker := rules.Simulate(2)
+	tracker := rules.Simulate(6)
 	TuiKeepPrinting(tracker)
 }

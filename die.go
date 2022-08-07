@@ -35,13 +35,13 @@ func NewDie(sides int) *Die {
 	die := &Die{sides: uint64(sides), state: state}
 
 	// Store the threshold to avoid bias
-	die.threshold = getThreshold(die.sides)
+	die.threshold = die.getThreshold(die.sides)
 	die.buffer = make([]int, die.threshold.amount)
 
 	return die
 }
 
-func getThreshold(sides uint64) Threshold {
+func (Die) getThreshold(sides uint64) Threshold {
 	threshold, found := sidesToThreshold[sides]
 	if found {
 		return threshold
@@ -54,8 +54,9 @@ func getThreshold(sides uint64) Threshold {
 	for i := threshold.amount; i > 0; i-- {
 		modulusValue *= sides
 	}
-
 	threshold.value = maxUint64 - maxUint64%modulusValue
+
+	sidesToThreshold[sides] = threshold
 	return threshold
 }
 
@@ -88,5 +89,5 @@ func (die *Die) rngNext() uint64 {
 }
 
 func (die Die) String() string {
-	return fmt.Sprintf("d%d", die.sides)
+	return fmt.Sprintf("D%d", die.sides)
 }

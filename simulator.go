@@ -2,7 +2,7 @@ package main
 
 type GameRules struct {
 	running  bool
-	die      *Die
+	dieSides int
 	lose     []bool
 	partials chan Scores
 }
@@ -12,7 +12,7 @@ func NewGameRules(dieSides int, lose ...int) *GameRules {
 	for _, value := range lose {
 		slice[value] = true
 	}
-	return &GameRules{die: NewDie(dieSides), lose: slice}
+	return &GameRules{dieSides: dieSides, lose: slice}
 }
 
 func (game *GameRules) Simulate(parallelism int) *Scores {
@@ -28,11 +28,12 @@ func (game *GameRules) Simulate(parallelism int) *Scores {
 
 func (game *GameRules) keepGenerating() {
 	var play []int
+	die := NewDie(game.dieSides)
 	for game.running {
 		// accumulate a number of scores before emitting them
 		scores := Scores{}
 		for i := 1000000; i > 0; i-- {
-			roll := game.die.Roll()
+			roll := die.Roll()
 			if game.lose[roll-1] {
 				scores.addPlay(play)
 				play = play[:0] // reuse the same array
