@@ -5,15 +5,24 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"math"
 )
 
-type Die struct {
-	sides                     uint64
-	state                     uint64
-	thresholds, buffer, queue []int
+type Threshold struct {
+	amount int
+	value  uint64
 }
 
-var sidesToThresholds = map[uint64][]int{}
+type Die struct {
+	sides         uint64
+	state         uint64
+	threshold     Threshold
+	buffer, queue []int
+}
+
+const maxUint64 = ^uint64(0)
+
+var sidesToThreshold = map[uint64]Threshold{}
 
 func NewDie(sides int) *Die {
 	// Generate a cryptographically secure seed for the RNG
@@ -25,25 +34,29 @@ func NewDie(sides int) *Die {
 	state := binary.LittleEndian.Uint64(buffer)
 	die := &Die{sides: uint64(sides), state: state}
 
-	// Store the thresholds to avoid bias when our state is a very large number
-	die.thresholds = getThresholds(die.sides)
-	die.buffer = make([]int, len(die.thresholds))
+	// Store the threshold to avoid bias
+	die.threshold = getThreshold(die.sides)
+	die.buffer = make([]int, die.threshold.amount)
 
 	return die
 }
 
-func getThresholds(sides uint64) []int {
-	result, found := sidesToThresholds[sides]
+func getThreshold(sides uint64) Threshold {
+	threshold, found := sidesToThreshold[sides]
 	if found {
-		return result
+		return threshold
 	}
-	for i := ^uint64(0); i > 0; i /= sides {
-		result = append(result, int(i%sides))
+
+	// ln(2**64)~==44.36, I'm rounding it down a bit to reduce RNG re-rolls.
+	threshold.amount = int(40 / math.Log(float64(sides)))
+
+	var modulusValue uint64 = 1
+	for i := threshold.amount; i > 0; i-- {
+		modulusValue *= sides
 	}
-	trimmed := make([]int, len(result))
-	copy(trimmed, result)
-	sidesToThresholds[sides] = trimmed
-	return trimmed
+
+	threshold.value = maxUint64 - maxUint64%modulusValue
+	return threshold
 }
 
 func (die *Die) Roll() int {
@@ -56,24 +69,22 @@ func (die *Die) Roll() int {
 }
 
 func (die *Die) generateRolls() []int {
-	// A 64 bit linear congruential RNG by Donald Knuth
-	die.state = die.state*6364136223846793005 + 1442695040888963407
-	// Store roll results in buffer
-	random := die.state
-	for i := range die.thresholds {
+	random := die.rngNext()
+	for random >= die.threshold.value {
+		random = die.rngNext()
+	}
+	// Store roll results in buffer, queue will be a slice from it
+	for i := range die.buffer {
 		die.buffer[i] = int(random % die.sides)
 		random /= die.sides
 	}
+	return die.buffer
+}
 
-	// Check thresholds for bias
-	for i := len(die.thresholds) - 1; i > 0; i-- {
-		if die.buffer[i] < die.thresholds[i] {
-			return die.buffer[:i]
-		}
-	}
-
-	// Wow, we really did roll a -1
-	return nil
+func (die *Die) rngNext() uint64 {
+	// A 64 bit linear congruential RNG by Donald Knuth
+	die.state = die.state*6364136223846793005 + 1442695040888963407
+	return die.state
 }
 
 func (die Die) String() string {
